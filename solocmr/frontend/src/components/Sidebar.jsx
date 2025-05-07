@@ -2,16 +2,16 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import "../assets/css/Sidebar.css";
 
-
-
 const Sidebar = () => {
   const location = useLocation();
 
   const links = [
     { path: "/dashboard", label: "Dashboard", icon: "📊" },
+    { path: "/analytics", label: "📈 Analytics" },
     { path: "/calendar", label: "Calendar", icon: "📅" },
     { path: "/notifications", label: "Notifications", icon: "🔔" },
     { path: "/logout", label: "Logout", icon: "🚪" },
+
   ];
 
   return (

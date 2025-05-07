@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./index.css";
 import "bootstrap/dist/css/bootstrap.min.css";
+import Analytics from "./pages/Analytics"; 
 
 // Components
 import Sidebar from "./components/Sidebar";
@@ -20,6 +21,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/calendar" element={<CalendarView />} />
             <Route path="/notifications" element={<NotificationSettings />} />
+            <Route path="/analytics" element={<Analytics />} />
             {/* <Route path="*" element={<NotFound />} /> */}
           </Routes>
         </div>
