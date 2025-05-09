@@ -12,6 +12,8 @@
     "bootstrap": "^5.3.6",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.9.4",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1",
     "react": "^19.1.0",
     "react-big-calendar": "^1.18.0",
     "react-bits": "^1.0.5",

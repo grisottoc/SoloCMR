@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import "../assets/css/Sidebar.css";
-
+import ThemeToggle from "./ThemeToggle";
+import "../styles/Sidebar.css";
 
 const Sidebar = () => {
   const location = useLocation();
@@ -11,7 +11,7 @@ const Sidebar = () => {
     { path: "/analytics", label: "Analytics", icon: "📈" },
     { path: "/calendar", label: "Calendar", icon: "📅" },
     { path: "/notifications", label: "Notifications", icon: "🔔" },
-    { path: "/logout", label: "Logout", icon: "🚪" },
+    { path: "/logout", label: "Logout", icon: "🚪" }
   ];
 
   return (
@@ -26,12 +26,14 @@ const Sidebar = () => {
             className={location.pathname === link.path ? "active" : ""}
           >
             <Link to={link.path}>
-              <span className="icon">{link.icon}</span>
-              <span>{link.label}</span>
+              <span className="icon">{link.icon}</span> {link.label}
             </Link>
           </li>
         ))}
       </ul>
+      <div className="theme-toggle-wrapper">
+        <ThemeToggle />
+      </div>
     </div>
   );
 };

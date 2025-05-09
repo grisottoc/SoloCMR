@@ -1,59 +1,105 @@
-// src/pages/Analytics.jsx
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { motion } from "framer-motion";
+
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
 const Analytics = () => {
-  const [clients, setClients] = useState([]);
+  const [clientData, setClientData] = useState([]);
+  const [serviceDistribution, setServiceDistribution] = useState([]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    axios
-      .get("http://127.0.0.1:5000/api/clients", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setClients(res.data))
-      .catch((err) => console.error("Error loading clients", err));
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("http://localhost:5000/api/clients", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+        setClientData(data);
+
+        // Prepare chart data
+        const serviceMap = {};
+        let dueSoon = 0;
+        let overdue = 0;
+        const today = new Date();
+
+        data.forEach((client) => {
+          const due = new Date(client.due_date);
+          const diff = (due - today) / (1000 * 60 * 60 * 24);
+          if (diff <= 7 && diff >= 0) dueSoon++;
+          else if (diff < 0) overdue++;
+
+          if (client.service) {
+            serviceMap[client.service] = (serviceMap[client.service] || 0) + 1;
+          }
+        });
+
+        setServiceDistribution(
+          Object.entries(serviceMap).map(([name, value]) => ({ name, value }))
+        );
+
+        setChartStats([
+          { name: "Due Soon (<= 7 days)", value: dueSoon },
+          { name: "Overdue", value: overdue },
+        ]);
+      } catch (error) {
+        console.error("Failed to fetch clients:", error);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  const serviceData = {};
-  clients.forEach((client) => {
-    serviceData[client.service] = (serviceData[client.service] || 0) + 1;
-  });
-
-  const pieData = Object.keys(serviceData).map((service) => ({
-    name: service,
-    value: serviceData[service],
-  }));
-
-  const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088FE"];
+  const [chartStats, setChartStats] = useState([]);
 
   return (
-    <div className="container fade-in">
-      <h2>📊 Analytics & Reports</h2>
+    <motion.div
+      className="container"
+      style={{ maxWidth: "900px", margin: "40px auto" }}
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <h2 className="text-center mb-4">📈 Analytics & Reports</h2>
 
-      <h4 className="mt-4">Services Distribution</h4>
-      <ResponsiveContainer width="100%" height={300}>
-        <PieChart>
-          <Pie
-            data={pieData}
-            dataKey="value"
-            nameKey="name"
-            outerRadius={100}
-            fill="#8884d8"
-            label
-          >
-            {pieData.map((_, index) => (
-              <Cell key={index} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip />
-        </PieChart>
-      </ResponsiveContainer>
+      <div className="mb-5">
+        <h5 className="mb-3">Client Status Summary</h5>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={chartStats}>
+            <XAxis dataKey="name" />
+            <YAxis allowDecimals={false} />
+            <Tooltip />
+            <Bar dataKey="value" fill="#007bff" radius={[5, 5, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
 
-      <h4 className="mt-4">Client Count</h4>
-      <p>Total Clients: {clients.length}</p>
-    </div>
+      <div>
+        <h5 className="mb-3">Service Distribution</h5>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              data={serviceDistribution}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              outerRadius={100}
+              label
+            >
+              {serviceDistribution.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </motion.div>
   );
 };
 
