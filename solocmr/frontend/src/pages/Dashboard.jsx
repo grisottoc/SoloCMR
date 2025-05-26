@@ -1,88 +1,113 @@
-// src/pages/Dashboard.jsx
-import React, { useEffect, useState, useRef } from "react";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
-import useTheme from "../hooks/useTheme";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import Sidebar from "../components/Sidebar";
-import "../assets/Dashboard.css";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 
 const Dashboard = () => {
-  const { theme } = useTheme();
   const [clients, setClients] = useState([]);
-  const [chartData, setChartData] = useState([]);
-  const fullRef = useRef();
-  const tableRef = useRef();
+  const [form, setForm] = useState({ name: "", email: "", service: "", notes: "", due_date: "" });
+  const [editingId, setEditingId] = useState(null);
+  const [error, setError] = useState("");
+
+  const token = localStorage.getItem("token");
+
+  const fetchClients = async () => {
+    try {
+      const res = await axios.get("http://127.0.0.1:5000/api/clients", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setClients(res.data);
+    } catch (err) {
+      console.error("Error loading clients:", err);
+      setError("Failed to load clients.");
+    }
+  };
 
   useEffect(() => {
-    const storedClients = JSON.parse(localStorage.getItem("clients")) || [];
-    setClients(storedClients);
-
-    const serviceCount = storedClients.reduce((acc, client) => {
-      acc[client.service] = (acc[client.service] || 0) + 1;
-      return acc;
-    }, {});
-
-    const formatted = Object.entries(serviceCount).map(([name, count]) => ({ name, count }));
-    setChartData(formatted);
+    fetchClients();
   }, []);
 
-  const exportToPDF = async (targetRef) => {
-    const canvas = await html2canvas(targetRef.current);
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF("p", "mm", "a4");
-    const width = pdf.internal.pageSize.getWidth();
-    const height = (canvas.height * width) / canvas.width;
-    pdf.addImage(imgData, "PNG", 0, 0, width, height);
-    pdf.save("dashboard.pdf");
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingId) {
+        await axios.put(`http://127.0.0.1:5000/api/client/${editingId}`, form, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } else {
+        await axios.post("http://127.0.0.1:5000/api/client", form, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+      setForm({ name: "", email: "", service: "", notes: "", due_date: "" });
+      setEditingId(null);
+      fetchClients();
+    } catch (err) {
+      console.error("Error saving client:", err);
+      setError("Failed to save client.");
+    }
+  };
+
+  const handleEdit = (client) => {
+    setForm(client);
+    setEditingId(client.id);
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`http://127.0.0.1:5000/api/client/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchClients();
+    } catch (err) {
+      console.error("Error deleting client:", err);
+    }
   };
 
   return (
-    <div className={`dashboard-wrapper ${theme}`}>
-      <Sidebar />
-      <div className="dashboard-content">
-        <h2 className="dashboard-title">📊 Dashboard Overview</h2>
+    <div className="container">
+      <h2 className="my-4">📋 Dashboard</h2>
+      {error && <p className="text-danger">{error}</p>}
 
-        <div className="pdf-buttons mb-3">
-          <button className="btn btn-primary me-2" onClick={() => exportToPDF(fullRef)}>Export Full Dashboard to PDF</button>
-          <button className="btn btn-secondary" onClick={() => exportToPDF(tableRef)}>Export Only Clients Table</button>
-        </div>
-
-        <div ref={fullRef} className="dashboard-section">
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="count" fill="#8884d8" />
-            </BarChart>
-          </ResponsiveContainer>
-
-          <div ref={tableRef} className="clients-table mt-4">
-            <h4>Client List</h4>
-            <table className="table table-striped">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Service</th>
-                  <th>Due Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clients.map((client, idx) => (
-                  <tr key={idx}>
-                    <td>{client.name}</td>
-                    <td>{client.email}</td>
-                    <td>{client.service}</td>
-                    <td>{client.due_date}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <form onSubmit={handleSubmit} className="mb-4">
+        <div className="row g-3">
+          <div className="col-md-6">
+            <input name="name" className="form-control" placeholder="Name" value={form.name} onChange={handleChange} required />
+          </div>
+          <div className="col-md-6">
+            <input name="email" className="form-control" placeholder="Email" value={form.email} onChange={handleChange} required />
+          </div>
+          <div className="col-md-6">
+            <input name="service" className="form-control" placeholder="Service" value={form.service} onChange={handleChange} />
+          </div>
+          <div className="col-md-6">
+            <input type="date" name="due_date" className="form-control" value={form.due_date} onChange={handleChange} />
+          </div>
+          <div className="col-12">
+            <textarea name="notes" className="form-control" placeholder="Notes" value={form.notes} onChange={handleChange}></textarea>
           </div>
         </div>
-      </div>
+        <button type="submit" className="btn btn-primary mt-3">
+          {editingId ? "Update Client" : "Add Client"}
+        </button>
+      </form>
+
+      <ul className="list-group">
+        {clients.map((client) => (
+          <li key={client.id} className="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <strong>{client.name}</strong> — {client.service} <br />
+              Due: {client.due_date || "N/A"} | Email: {client.email}
+            </div>
+            <div>
+              <button className="btn btn-sm btn-warning me-2" onClick={() => handleEdit(client)}>Edit</button>
+              <button className="btn btn-sm btn-danger" onClick={() => handleDelete(client.id)}>Delete</button>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };

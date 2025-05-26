@@ -1,5 +1,7 @@
-from db_config import db
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+
+db = SQLAlchemy()
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -26,14 +28,14 @@ class Client(db.Model):
 class NotificationSetting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True)
-    custom_days_before = db.Column(db.String(50), default="1,2,3")  # comma-separated values
-    snoozed_ids = db.Column(db.String(200), default="")  # comma-separated client IDs
-    completed_ids = db.Column(db.String(200), default="")  # comma-separated client IDs
+    custom_days_before = db.Column(db.String(50), default="1,2,3")
+    snoozed_ids = db.Column(db.String(200), default="")
+    completed_ids = db.Column(db.String(200), default="")
 
 class NotificationPreference(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    days_before = db.Column(db.Integer, default=2)  # How many days before to notify
+    days_before = db.Column(db.Integer, default=2)
     snoozed = db.Column(db.Boolean, default=False)
     completed = db.Column(db.Boolean, default=False)
 

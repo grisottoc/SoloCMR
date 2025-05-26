@@ -5,6 +5,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import { parseISO, format } from "date-fns";
 import { dateFnsLocalizer } from "react-big-calendar";
 import { enUS } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 
 const locales = {
   "en-US": enUS,
@@ -14,14 +15,18 @@ const localizer = dateFnsLocalizer({
   format,
   parse: parseISO,
   startOfWeek: () => new Date(),
-  getDay: date => date.getDay(),
+  getDay: (date) => date.getDay(),
   locales,
 });
 
 const CalendarView = () => {
   const [events, setEvents] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return navigate("/login");
+
     // Replace with actual API call later
     const mockEvents = [
       {
@@ -36,13 +41,13 @@ const CalendarView = () => {
       },
     ];
     setEvents(mockEvents);
-  }, []);
+  }, [navigate]);
 
   const handleSelectSlot = ({ start, end }) => {
     const title = prompt("Enter event title:");
     if (title) {
       const newEvent = { title, start, end };
-      setEvents(prev => [...prev, newEvent]);
+      setEvents((prev) => [...prev, newEvent]);
     }
   };
 

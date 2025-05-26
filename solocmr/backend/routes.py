@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
-from db_config import db
-from models import User, Client
+from models import db, User, Client
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from models import NotificationSetting
 
 api = Blueprint('api', __name__)
 
@@ -32,32 +32,19 @@ def login():
 def get_clients():
     user_id = get_jwt_identity()
     clients = Client.query.filter_by(user_id=user_id).all()
-    return jsonify([{
-        "id": c.id,
-        "name": c.name,
-        "email": c.email,
-        "service": c.service,
-        "notes": c.notes,
-        "due_date": c.due_date
-    } for c in clients]), 200
+    return jsonify([{ "id": c.id, "name": c.name, "email": c.email, "service": c.service, "notes": c.notes, "due_date": c.due_date } for c in clients]), 200
 
 @api.route("/api/client", methods=["POST"])
 @jwt_required()
 def add_client():
-    from flask import current_app
     user_id = get_jwt_identity()
     data = request.get_json()
-
-    print("📦 Incoming data:", data)
-    print("🧾 Authenticated user ID:", user_id)
 
     required_fields = ["name", "email", "service", "notes", "due_date"]
     for field in required_fields:
         if field not in data:
-            print(f"❌ Missing field: {field}")
             return jsonify({"msg": f"{field} is missing"}), 400
         if not isinstance(data[field], str):
-            print(f"❌ Invalid type for: {field} = {data[field]} (type: {type(data[field])})")
             return jsonify({"msg": f"{field} must be a string"}), 422
 
     try:
@@ -71,17 +58,9 @@ def add_client():
         )
         db.session.add(client)
         db.session.commit()
-        print("✅ Client added successfully")
         return jsonify({"msg": "Client added"}), 201
     except Exception as e:
-        print("🔥 Exception:", str(e))
         return jsonify({"msg": str(e)}), 500
-
-
-@api.route("/")
-def index():
-    return "✅ Flask backend is running!"
-
 
 @api.route("/api/client/<int:id>", methods=["GET"])
 @jwt_required()
@@ -90,15 +69,7 @@ def get_client(id):
     client = Client.query.filter_by(id=id, user_id=user_id).first()
     if not client:
         return jsonify({"msg": "Client not found"}), 404
-    return jsonify({
-        "id": client.id,
-        "name": client.name,
-        "email": client.email,
-        "service": client.service,
-        "notes": client.notes,
-        "due_date": client.due_date
-    }), 200
-
+    return jsonify({ "id": client.id, "name": client.name, "email": client.email, "service": client.service, "notes": client.notes, "due_date": client.due_date }), 200
 
 @api.route("/api/client/<int:id>", methods=["PUT"])
 @jwt_required()
@@ -127,3 +98,54 @@ def delete_client(id):
     db.session.delete(client)
     db.session.commit()
     return jsonify({"msg": "Client deleted"}), 200
+
+@api.route("/api/notification-settings", methods=["GET", "PUT"])
+@jwt_required()
+def notification_settings():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+
+    if request.method == "GET":
+        setting = user.notification_settings
+        if not setting:
+            return jsonify({"msg": "No settings found"}), 404
+        return jsonify({
+            "custom_days_before": setting.custom_days_before,
+            "snoozed_ids": setting.snoozed_ids,
+            "completed_ids": setting.completed_ids
+        })
+
+    elif request.method == "PUT":
+        data = request.get_json()
+        setting = user.notification_settings or NotificationSetting(user_id=user.id)
+        setting.custom_days_before = data.get("custom_days_before", "1,2,3")
+        setting.snoozed_ids = data.get("snoozed_ids", "")
+        setting.completed_ids = data.get("completed_ids", "")
+        db.session.add(setting)
+        db.session.commit()
+        return jsonify({"msg": "Notification settings updated"})
+
+@api.route("/api/dev/users")
+def get_users():
+    users = User.query.all()
+    return jsonify([{"id": u.id, "email": u.email} for u in users])
+
+@api.route("/api/dev/clients")
+def get_all_clients():
+    clients = Client.query.all()
+    return jsonify([
+        {
+            "id": c.id,
+            "user_id": c.user_id,
+            "name": c.name,
+            "email": c.email,
+            "service": c.service,
+            "notes": c.notes,
+            "due_date": c.due_date
+        }
+        for c in clients
+    ])
+
+@api.route("/")
+def index():
+    return "\u2705 Flask backend is running!"
