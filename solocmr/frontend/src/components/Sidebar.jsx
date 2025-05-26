@@ -46,6 +46,9 @@ const Sidebar = () => {
           </button>
         </li>
       </ul>
+      <div className="sidebar-footer">
+        <p>© {new Date().getFullYear()} SoloCMR</p>
+      </div>
     </div>
   );
 };

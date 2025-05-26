@@ -18,6 +18,10 @@ __pycache__/
 *.sqlite3
 db.sqlite
 
+# Virtual environments
+venv/
+**/venv/
+
 # === ENVIRONMENT VARIABLES ===
 .env
 .env.local
